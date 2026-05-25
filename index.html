@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0000aa">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
+  <title>WHO WANTS TO BE AN AMERICAN</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <button id="music-toggle" title="Toggle background music">♪ MUSIC: ON</button>
+
+  <!-- SPLASH -->
+  <div class="screen active" id="splash">
+    <div class="border-box">
+      <div class="stars">★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★</div>
+      <h1>WHO WANTS TO BE</h1>
+      <h1>AN AMERICAN?</h1>
+      <div class="stars">★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★ ★</div>
+      <div class="subtitle">USCIS NATURALIZATION TEST EDITION</div>
+      <div class="version">v1.5 &nbsp; (c) 2026</div>
+      <div class="prompt">► PRESS ANY KEY TO BEGIN ◄</div>
+      <div class="credits">100 OFFICIAL CIVICS QUESTIONS &nbsp; • &nbsp; WASHINGTON STATE EDITION</div>
+    </div>
+  </div>
+
+  <!-- DIFFICULTY SELECT -->
+  <div class="screen" id="difficulty">
+    <div class="border-box">
+      <h2 class="diff-title">► SELECT DIFFICULTY ◄</h2>
+      <div id="coverage-status" class="coverage-status"></div>
+      <div class="diff-grid">
+        <div class="diff-option" data-diff="easy">
+          <div class="diff-label">EASY</div>
+          <div class="diff-desc">
+            Multiple choice. All 3 lifelines.<br>
+            <span class="dim">Questions rotate across plays so you see every official answer over time.</span>
+          </div>
+        </div>
+        <div class="diff-option" data-diff="medium">
+          <div class="diff-label">MEDIUM</div>
+          <div class="diff-desc">
+            <strong>Type your answer.</strong> No lifelines.<br>
+            <span class="dim">Forgives typos. "Close but not quite" gets a hint. Most like the real oral test.</span>
+          </div>
+        </div>
+        <div class="diff-option disabled" data-diff="hard">
+          <div class="diff-label">HARD</div>
+          <div class="diff-desc">
+            <strong>Speak your answer.</strong> Voice recognition.<br>
+            <span class="dim">Coming in v2.0 — mirrors the real USCIS oral exam.</span>
+          </div>
+        </div>
+      </div>
+      <button id="reset-coverage" class="reset-link">[reset coverage]</button>
+    </div>
+  </div>
+
+  <!-- LOADING -->
+  <div class="screen" id="loading">
+    <div>NATURALIZATION.EXE</div>
+    <div class="bar"><div class="fill"></div></div>
+    <div class="label">LOADING...</div>
+  </div>
+
+  <!-- GAME -->
+  <div class="screen" id="game">
+    <div id="question-panel" class="panel">
+      <span class="label">QUESTION</span>
+      <div id="q-counter" style="color: var(--cyan); font-size: 20px; letter-spacing: 1px;">Q 1 / 15  —  $100</div>
+      <div id="question-text">Loading question...</div>
+      <div id="answers" class="answers"></div>
+      <div id="type-input-wrap" style="display:none"></div>
+      <div id="final-prompt" style="color: var(--magenta); text-align: center; min-height: 28px; font-size: 20px;"></div>
+      <div class="lifelines" id="lifeline-row">
+        <button class="lifeline" id="lifeline-fifty">50 : 50</button>
+        <button class="lifeline" id="lifeline-phone">☎  PHONE</button>
+        <button class="lifeline" id="lifeline-audience">👥  AUDIENCE</button>
+      </div>
+    </div>
+
+    <div id="ladder" class="panel">
+      <span class="label">$$$ LADDER</span>
+      <div id="ladder-list"></div>
+    </div>
+  </div>
+
+  <!-- After-answer modal -->
+  <div class="modal" id="after-modal">
+    <div class="box"></div>
+  </div>
+
+  <!-- Lifeline modal -->
+  <div class="modal" id="lifeline-modal">
+    <div class="box"></div>
+  </div>
+
+  <!-- End-of-game modal -->
+  <div class="modal" id="end-modal">
+    <div class="box"></div>
+  </div>
+
+  <script src="questions.js"></script>
+  <script src="game.js"></script>
+</body>
+</html>
