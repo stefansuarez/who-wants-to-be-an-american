@@ -162,6 +162,8 @@ function letterOf(i) { return ['A','B','C','D'][i]; }
 function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
+  // Reset scroll so taps that switch screens always land at the top of the new screen.
+  window.scrollTo(0, 0);
 }
 
 // ===== String matching (Medium mode) =====
@@ -224,42 +226,73 @@ function ratio(a, b) {
 //   { kind: 'fuzzy', target }   — accepted, small typo
 //   { kind: 'close', target }   — not accepted, but worth a hint
 //   { kind: 'miss' }
+// Two tokens "match" if one is a prefix of the other AND the shorter is >= 4 chars.
+// Catches plural/morphological variants: religion/religions, practice/practiced, right/rights.
+function tokenMatch(t1, t2) {
+  if (t1 === t2) return true;
+  const [shorter, longer] = t1.length <= t2.length ? [t1, t2] : [t2, t1];
+  return shorter.length >= 4 && longer.startsWith(shorter);
+}
+
 function matchSingle(userInput, acceptedList) {
   const u = normalize(userInput);
   if (!u) return { kind: 'miss' };
   const uTokens = u.split(' ').filter(Boolean);
+  const uTokenSet = new Set(uTokens);
   const uIsNumOnly = uTokens.length > 0 && uTokens.every(t => /^\d+$/.test(t));
+  const uSig = uTokens.filter(t => t.length >= 4);
 
   // Pass 1: exact normalized equality
   for (const a of acceptedList) {
     if (u === normalize(a)) return { kind: 'exact', target: a };
   }
-  // Pass 2: numeric-only user input — match if number appears as a token in accepted
+  // Pass 2: numeric-only user input — match if every number appears as a token in accepted
   if (uIsNumOnly) {
     for (const a of acceptedList) {
       const aTokens = normalize(a).split(' ').filter(Boolean);
       if (uTokens.every(t => aTokens.includes(t))) return { kind: 'exact', target: a };
     }
   }
-  // Pass 3: token containment
+  // Pass 3: token containment (exact tokens)
   for (const a of acceptedList) {
     const aTokens = normalize(a).split(' ').filter(Boolean);
     if (!aTokens.length) continue;
-    // All accepted tokens present in user (e.g., user "the Speaker of the House" -> "speaker house" matches accepted "speaker house")
-    if (aTokens.every(t => uTokens.includes(t))) return { kind: 'exact', target: a };
-    // Single-word accepted contained in user (e.g., "Jefferson" inside "Thomas Jefferson")
-    if (aTokens.length === 1 && aTokens[0].length >= 4 && uTokens.includes(aTokens[0])) {
+    if (aTokens.every(t => uTokenSet.has(t))) return { kind: 'exact', target: a };
+    if (aTokens.length === 1 && aTokens[0].length >= 4 && uTokenSet.has(aTokens[0])) {
       return { kind: 'exact', target: a };
     }
   }
-  // Pass 4: fuzzy + close
-  let bestFuzzy = null, bestFuzzyR = 0;
+  // Pass 4: SEMANTIC OVERLAP — does the user's answer cover the key concepts of an accepted answer?
+  // Significant tokens = length >= 4. Tokens "match" via tokenMatch (handles plurals etc).
+  let bestCov = 0, bestCovTarget = null, bestCovHits = 0, bestCovSize = 0;
+  for (const a of acceptedList) {
+    const aTokens = normalize(a).split(' ').filter(Boolean);
+    const aSig = aTokens.filter(t => t.length >= 4);
+    if (aSig.length === 0) continue;
+    let hits = 0;
+    for (const at of aSig) if (uSig.some(ut => tokenMatch(at, ut))) hits++;
+    const cov = hits / aSig.length;
+    if (cov > bestCov) { bestCov = cov; bestCovTarget = a; bestCovHits = hits; bestCovSize = aSig.length; }
+  }
+  // Match: 60%+ coverage, and require ≥2 hits when accepted has ≥2 significant tokens
+  // (prevents one generic word like "river" or "law" from matching long accepted answers).
+  if (bestCov >= 0.6 && (bestCovSize === 1 || bestCovHits >= 2)) {
+    return { kind: 'fuzzy', target: bestCovTarget };
+  }
+
+  // Pass 5: whole-string Levenshtein for typo tolerance on shorter answers
+  let bestR = 0, bestRTarget = null;
   for (const a of acceptedList) {
     const r = ratio(u, normalize(a));
-    if (r > bestFuzzyR) { bestFuzzyR = r; bestFuzzy = a; }
+    if (r > bestR) { bestR = r; bestRTarget = a; }
   }
-  if (bestFuzzyR >= 0.85) return { kind: 'fuzzy', target: bestFuzzy };
-  if (bestFuzzyR >= 0.50) return { kind: 'close', target: bestFuzzy };
+  if (bestR >= 0.85) return { kind: 'fuzzy', target: bestRTarget };
+
+  // Pass 6: close hint — need either multi-token concept overlap OR (substantial overlap + decent string similarity)
+  if (bestCov >= 0.5 && (bestCovHits >= 2 || bestR >= 0.40)) {
+    return { kind: 'close', target: bestCovTarget };
+  }
+  if (bestR >= 0.50) return { kind: 'close', target: bestRTarget };
   return { kind: 'miss' };
 }
 
